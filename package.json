@@ -1,0 +1,25 @@
+{
+  "name": "hemera-lord",
+  "version": "1.0.0",
+  "description": "Realtime chord diagram about your service dependencies",
+  "main": "index.js",
+  "scripts": {
+    "start:frontend": "serve ./app",
+    "start:backend": "cd server && npm start",
+    "start": "run-p start:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hemerajs/hemera-lord.git"
+  },
+  "author": "Dustin Deus <deusdustin@gmail.com> (http://www.starptech.de)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hemerajs/hemera-lord/issues"
+  },
+  "homepage": "https://github.com/hemerajs/hemera-lord#readme",
+  "dependencies": {
+    "serve": "^6.5.4",
+    "npm-run-all": "^4.1.2"
+  }
+}
