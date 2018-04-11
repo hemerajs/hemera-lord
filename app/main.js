@@ -27,13 +27,20 @@ addService({
 });
 
 addService({
-  dependencies: ["test"],
+  dependencies: ["test", "test-2"],
   node: {
     name: "test-3"
   }
 });
 
-console.log(services)
+addService({
+  dependencies: ["test", "test-3"],
+  node: {
+    name: "test-4"
+  }
+});
+
+console.log(services);
 
 draw(services);
 
@@ -69,19 +76,16 @@ function addService(service) {
     services.forEach(s => {
       s[1].push(servicePos(services, s[0]));
     });
-    let newPos = services.length
-    let serviceMatrix = new Array(newPos+1).fill(newPos);
+    let serviceMatrix = new Array(services.length + 1).fill(services.length);
     service.dependencies.forEach(dep => {
       let pos = servicePos(services, dep);
       if (pos !== -1) {
         serviceMatrix[pos] = pos;
-      } else {
-        console.log("service not found")
       }
     });
     services.push([service.node.name, serviceMatrix, randomHexColor()]);
   } else {
-    console.log('service not registered')
+    console.log("service not registered");
   }
 }
 

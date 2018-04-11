@@ -2,38 +2,11 @@
 
 // https://technology.amis.nl/2017/02/19/node-js-application-using-sse-server-sent-events-to-push-updates-read-from-kafka-topic-to-simple-html-client-application/
 
-const fastify = require('fastify')({ logger: { level: 'debug' } })
-const ConnectionPool = require('./connectionPool')
-const pool = new ConnectionPool()
-
-fastify.register(require('fastify-hemera'), {
-  plugins: [require('hemera-knabe')],
-  hemera: {
-    logLevel: 'error',
-    name: 'lord'
-  }
-})
-
-fastify.route({
-  method: 'GET',
-  url: '/events',
-  handler: (req, reply) => {
-    reply
-      .code(200)
-      .type('text/event-stream;charset=UTF-8')
-      .header('Access-Control-Allow-Origin', '*')
-      .header('Cache-Control', 'no-cache')
-      .header('Connection', 'keep-alive')
-
-    // Add connection
-    pool.add(reply.res)
-    reply.send(reply.res)
-    fastify.hemera.sendKnabeReport()
-  }
-})
+const fastify = require('./build')()
 
 async function start() {
   await fastify.listen(3000)
+  // demo purpose
   fastify.hemera.add(
     {
       topic: 'math',
@@ -53,8 +26,8 @@ async function start() {
       topic: 'knabe'
     },
     function(req) {
-      console.log('Message arrived')
-      pool.broadcast({
+      fastify.log.info('Message arrived')
+      fastify.pool.broadcast({
         id: this.trace$.traceId,
         event: 'service',
         data: req
