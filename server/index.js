@@ -3,10 +3,8 @@
 // https://technology.amis.nl/2017/02/19/node-js-application-using-sse-server-sent-events-to-push-updates-read-from-kafka-topic-to-simple-html-client-application/
 
 const fastify = require('fastify')({ logger: { level: 'debug' } })
-const through = require('through2')
-const stringify = require('json-stringify-safe')
-const EOL = require('os').EOL
-const connections = []
+const ConnectionPool = require('./connectionPool')
+const pool = new ConnectionPool()
 
 fastify.register(require('fastify-hemera'), {
   hemera: {
@@ -17,11 +15,6 @@ fastify.register(require('fastify-hemera'), {
 fastify.route({
   method: 'GET',
   url: '/events',
-  schema: {
-    params: {
-      pattern: { type: 'string' }
-    }
-  },
   beforeHandler: function(request, reply, done) {
     reply
       .code(200)
@@ -29,15 +22,8 @@ fastify.route({
       .header('Access-Control-Allow-Origin', '*')
       .header('Cache-Control', 'no-cache')
       .header('Connection', 'keep-alive')
-    // Add connections
-    connections.push(reply.res)
-    reply.res.once('close', function() {
-      var i = connections.indexOf(reply.res)
-      if (i >= 0) {
-        connections.splice(i, 1)
-      }
-      console.log('Client disconnected, now: ', connections.length)
-    })
+    // Add connection
+    pool.add(reply.res)
     done()
   },
   handler: (req, reply) => {
@@ -63,10 +49,10 @@ start()
       },
       function(req) {
         console.log('Message arrived')
-        connections.forEach(conn => {
-          conn.write('id: ' + this.trace$.traceId + '\n')
-          conn.write('event: ' + req.cmd + '\n')
-          conn.write('data: ' + stringify(req.data) + '\n\n')
+        pool.broadcast({
+          id: this.trace$.traceId,
+          event: req.cmd,
+          data: JSON.stringify(req.data)
         })
       }
     )
