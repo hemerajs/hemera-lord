@@ -27,6 +27,7 @@ fastify.route({
     reply.send(reply.res)
   }
 })
+
 async function start() {
   await fastify.listen(3000)
 }
@@ -49,7 +50,7 @@ start()
         pool.broadcast({
           id: this.trace$.traceId,
           event: req.cmd,
-          data: JSON.stringify(req.data)
+          data: req.data
         })
       }
     )
