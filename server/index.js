@@ -15,7 +15,7 @@ fastify.register(require('fastify-hemera'), {
 fastify.route({
   method: 'GET',
   url: '/events',
-  beforeHandler: function(request, reply, done) {
+  handler: (req, reply) => {
     reply
       .code(200)
       .type('text/event-stream;charset=UTF-8')
@@ -24,9 +24,6 @@ fastify.route({
       .header('Connection', 'keep-alive')
     // Add connection
     pool.add(reply.res)
-    done()
-  },
-  handler: (req, reply) => {
     reply.send(reply.res)
   }
 })
