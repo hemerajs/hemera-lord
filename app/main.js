@@ -3,39 +3,47 @@
 ////////////////////////////////////////////////////////////
 
 var margin = { left: 20, top: 20, right: 20, bottom: 20 },
-  width = Math.min(window.innerWidth, 700) - margin.left - margin.right,
-  height = Math.min(window.innerWidth, 700) - margin.top - margin.bottom,
+  width = Math.min(window.innerWidth, 800) - margin.left - margin.right,
+  height = Math.min(window.innerWidth, 800) - margin.top - margin.bottom,
   innerRadius = Math.min(width, height) * 0.39,
-	outerRadius = innerRadius * 1.1;
+  outerRadius = innerRadius * 1.1;
 
-var Names = [
-    "order",
-    "billing",
-    "queue",
-    "email",
-    "user",
-    "payment"
-  ],
-  colors = ["#301E1E", "#083E77", "#342350", "#567235", "#8B161C", "#DF7C00"],
-  opacityDefault = 0.8;
+var opacityDefault = 0.8;
 
-var matrix = [
-  [0, 4, 3, 2, 5, 2], //order
-  [4, 0, 3, 2, 4, 3], //billing
-  [3, 3, 0, 2, 3, 3], //queue
-  [2, 2, 2, 0, 3, 3], //email
-  [5, 4, 3, 3, 0, 2], //payment
-  [2, 3, 3, 3, 2, 0] //payment
-];
+var services = [];
 
-draw(matrix, Names, colors);
+addService({
+  dependencies: [],
+  node: {
+    name: "test"
+  }
+});
+
+addService({
+  dependencies: ["test"],
+  node: {
+    name: "test-2"
+  }
+});
+
+addService({
+  dependencies: ["test"],
+  node: {
+    name: "test-3"
+  }
+});
+
+console.log(services)
+
+draw(services);
 
 let es = new EventSource("http://localhost:3000/events");
 
 es.addEventListener(
-  "service:registered",
+  "service",
   event => {
     const msg = JSON.parse(event.data);
+    console.log(msg);
   },
   false
 );
@@ -51,19 +59,77 @@ es.addEventListener(
   false
 );
 
-function rerender() {
-  var svg = d3.select("svg").remove();
-  draw(matrix, Names, colors);
+function servicePos(services, name) {
+  return services.findIndex(s => s[0] === name);
 }
 
-function draw(matrix, Names, colors) {
+function addService(service) {
+  if (servicePos(services, service.node.name) === -1) {
+    // expand
+    services.forEach(s => {
+      s[1].push(servicePos(services, s[0]));
+    });
+    let newPos = services.length
+    let serviceMatrix = new Array(newPos+1).fill(newPos);
+    service.dependencies.forEach(dep => {
+      let pos = servicePos(services, dep);
+      if (pos !== -1) {
+        serviceMatrix[pos] = pos;
+      } else {
+        console.log("service not found")
+      }
+    });
+    services.push([service.node.name, serviceMatrix, randomHexColor()]);
+  } else {
+    console.log('service not registered')
+  }
+}
+
+function extractColors(services) {
+  let colors = [];
+  services.forEach(s => {
+    colors.push(s[2]);
+  });
+  return colors;
+}
+
+function extractNames(services) {
+  let names = [];
+  services.forEach(s => {
+    names.push(s[0]);
+  });
+  return names;
+}
+
+function extractMatrix(services) {
+  let matrix = [];
+  services.forEach(s => {
+    matrix.push(s[1]);
+  });
+  return matrix;
+}
+
+function randomHexColor() {
+  return "#" + Math.floor(Math.random() * 16777215).toString(16);
+}
+
+function rerender(services) {
+  var svg = d3.select("svg").remove();
+  draw(services);
+}
+
+function draw(services) {
+  var matrix = extractMatrix(services);
+  var names = extractNames(services);
+  var colors = extractColors(services);
+
   ////////////////////////////////////////////////////////////
   /////////// Create scale and layout functions //////////////
   ////////////////////////////////////////////////////////////
 
   var colors = d3.scale
     .ordinal()
-    .domain(d3.range(Names.length))
+    .domain(d3.range(names.length))
     .range(colors);
 
   //A "custom" d3 chord function that automatically sorts the order of the chords in such a manner to reduce overlap
@@ -250,7 +316,7 @@ function draw(matrix, Names, colors) {
       return "#arc" + i;
     })
     .text(function(d, i) {
-      return Names[i];
+      return names[i];
     });
 
   ////////////////////////////////////////////////////////////
@@ -312,9 +378,9 @@ function draw(matrix, Names, colors) {
       content: function() {
         return (
           "<p style='font-size: 11px; text-align: center;'><span style='font-weight:900'>" +
-          Names[d.source.index] +
+          names[d.source.index] +
           "</span> and <span style='font-weight:900'>" +
-          Names[d.target.index] +
+          names[d.target.index] +
           "</span> appeared together in <span style='font-weight:900'>" +
           d.source.value +
           "</span> movies </p>"

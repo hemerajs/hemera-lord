@@ -7,8 +7,10 @@ const ConnectionPool = require('./connectionPool')
 const pool = new ConnectionPool()
 
 fastify.register(require('fastify-hemera'), {
+  plugins: [require('hemera-knabe')],
   hemera: {
-    logLevel: 'error'
+    logLevel: 'error',
+    name: 'lord'
   }
 })
 
@@ -22,14 +24,43 @@ fastify.route({
       .header('Access-Control-Allow-Origin', '*')
       .header('Cache-Control', 'no-cache')
       .header('Connection', 'keep-alive')
+
     // Add connection
     pool.add(reply.res)
     reply.send(reply.res)
+    fastify.hemera.sendKnabeReport()
   }
 })
 
 async function start() {
   await fastify.listen(3000)
+  fastify.hemera.add(
+    {
+      topic: 'math',
+      cmd: 'add'
+    },
+    req => Promise.resolve(req.a + req.b)
+  )
+  fastify.hemera.add(
+    {
+      topic: 'math',
+      cmd: 'sub'
+    },
+    req => Promise.resolve(req.a - req.b)
+  )
+  fastify.hemera.add(
+    {
+      topic: 'knabe'
+    },
+    function(req) {
+      console.log('Message arrived')
+      pool.broadcast({
+        id: this.trace$.traceId,
+        event: 'service',
+        data: req
+      })
+    }
+  )
 }
 
 start()
@@ -39,30 +70,6 @@ start()
         fastify.server.address().port
       }`
     )
-
-    fastify.hemera.add(
-      {
-        topic: 'hemera-lord',
-        cmd: 'service:registered'
-      },
-      function(req) {
-        console.log('Message arrived')
-        pool.broadcast({
-          id: this.trace$.traceId,
-          event: req.cmd,
-          data: req.data
-        })
-      }
-    )
-
-    setInterval(() => {
-      fastify.hemera.act({
-        topic: 'hemera-lord',
-        cmd: 'service:registered',
-        pubsub$: true,
-        data: { test: true }
-      })
-    }, 3000)
   })
   .catch(err => {
     console.error(err)
